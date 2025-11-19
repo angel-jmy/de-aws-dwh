@@ -4,7 +4,7 @@ import boto3, json, random, datetime
 app = Flask(__name__)
 
 region = "us-east-2"
-stream_name = "order_stream"
+stream_name = "team2_Data_Fact"
 kinesis = boto3.client("kinesis", region_name=region)
 
 products = [
