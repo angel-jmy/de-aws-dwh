@@ -172,7 +172,7 @@ if not inserts.rdd.isEmpty():
     new_records = (
         inserts
         .drop("Op")
-        .withColumn("effective_date", F.col("updated_at"))
+        .withColumn("effective_date", F.current_timestamp())
         .withColumn("end_date", F.lit(None).cast("timestamp"))
         .withColumn("current_flag", F.lit(1))
         .withColumn("is_deleted", F.lit(0))
@@ -189,14 +189,14 @@ if not updates.rdd.isEmpty():
         .join(updates.select(PK, "updated_at").alias("cdc"), on = PK, how="inner")
         .where(F.col("dim.current_flag") == 1)
         .select("dim.*", F.col("cdc.updated_at").alias("cdc_updated_at"))
-        .withColumn("end_date", F.col("cdc_updated_at"))
+        .withColumn("end_date", F.current_timestamp())
         .withColumn("current_flag", F.lit(0))
         .drop("cdc_updated_at")
     )
     updated_new = (
         updates
         .drop("Op")
-        .withColumn("effective_date", F.col("updated_at"))
+        .withColumn("effective_date", F.current_timestamp())
         .withColumn("end_date", F.lit(None).cast("timestamp"))
         .withColumn("current_flag", F.lit(1))
         .withColumn("is_deleted", F.lit(0))
