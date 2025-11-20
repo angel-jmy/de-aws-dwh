@@ -1,2 +1,4 @@
 venv/
 .env
+invoke-cdc-trigger-team2.json
+output.json

@@ -40,43 +40,50 @@ try:
     print(f"Full load read succeeded with {full_df.count()} rows.")
 except Exception as e:
     print(f"Failed to read full load files from {bronze_path}: {str(e)}")
-    job.commit()
-    sys.exit(0)
-    
-if not full_df.rdd.isEmpty():
-    # Updating Schema
-    full_df = full_df.withColumn(
-        "updated_at", F.to_timestamp("updated_at", "yyyy-MM-dd HH:mm:ss.SSSSSS")
-        )
-    print("Showing first 5 rows of full load data:")
-    full_df.show(5, truncate = False)
-    # -------- Adding CDC rows to full_df
-    init_dim = (
-        full_df
-        .filter(F.col(PK).isNotNull())
-        .dropDuplicates([PK])
-        .withColumn("effective_date", F.col("updated_at"))
-        .withColumn("end_date", F.lit(None).cast("timestamp"))
-        .withColumn("current_flag", F.lit(1))
-        .withColumn("is_deleted", F.lit(0))
-    )
-    init_dim.write.mode("overwrite").parquet(silver_path)
-    print(f"Full load completed with {init_dim.count()} rows.")
-    dim_df = init_dim
-    
-else:
-    print("No full load (LOAD) files found. Building from existing dimension.")
     try:
-        dim_df = (
-            spark.read
-            .parquet(silver_path)
-        )
-    except Exception as e:
-        print(f"No full load data and no existing dimension table: {str(e)}")
+        dim_df = spark.read.parquet(silver_path)
+        print(f"Loaded existing dimension table from {silver_path} "
+              f"with {dim_df.count()} rows.")
+    except Exception as e2:
+        print(f"No full load data and no existing dimension table: {str(e2)}")
         print("Exiting job...")
         job.commit()
         sys.exit(0)
-
+else:
+    if not full_df.rdd.isEmpty():
+        # Updating Schema
+        full_df = full_df.withColumn(
+            "updated_at", F.to_timestamp("updated_at", "yyyy-MM-dd HH:mm:ss.SSSSSS")
+            )
+        print("Showing first 5 rows of full load data:")
+        full_df.show(5, truncate = False)
+        # -------- Adding CDC rows to full_df
+        init_dim = (
+            full_df
+            .filter(F.col(PK).isNotNull())
+            .dropDuplicates([PK])
+            .withColumn("effective_date", F.col("updated_at"))
+            .withColumn("end_date", F.lit(None).cast("timestamp"))
+            .withColumn("current_flag", F.lit(1))
+            .withColumn("is_deleted", F.lit(0))
+        )
+        init_dim.write.mode("overwrite").parquet(silver_path)
+        print(f"Full load completed with {init_dim.count()} rows.")
+        dim_df = init_dim
+    
+    else:
+        print("No full load (LOAD) files found. Building from existing dimension.")
+        try:
+            dim_df = (
+                spark.read
+                .parquet(silver_path)
+            )
+        except Exception as e2:
+            print(f"No full load data and no existing dimension table: {str(e2)}")
+            print("Exiting job...")
+            job.commit()
+            sys.exit(0)
+    
 
 # -------- Moving on to CDC processing
 try:
