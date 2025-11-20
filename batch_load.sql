@@ -54,3 +54,6 @@ from customer_scd2_dim_team2;
 select count(*) as tot_active
 from customer_scd2_dim_team2
 where current_flag = 1 and is_deleted = 0;
+
+select * from customer_scd2_dim_team2
+order by customer_id, updated_at;
